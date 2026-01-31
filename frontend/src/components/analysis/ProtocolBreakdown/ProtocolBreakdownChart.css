@@ -1,0 +1,74 @@
+.protocol-breakdown {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.breakdown-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #212529;
+}
+
+.breakdown-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+}
+
+@media (max-width: 992px) {
+  .breakdown-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.breakdown-chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breakdown-table {
+  overflow-x: auto;
+}
+
+.breakdown-table table {
+  margin-bottom: 0;
+}
+
+.protocol-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.percentage-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.percentage-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.percentage-text {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #212529;
+  z-index: 1;
+  text-shadow: 0 0 2px white, 0 0 4px white;
+}

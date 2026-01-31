@@ -1,0 +1,38 @@
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.loading-spinner-fullpage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loading-message {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.spinner-small {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.spinner-medium {
+  width: 3rem;
+  height: 3rem;
+}
+
+.spinner-large {
+  width: 4rem;
+  height: 4rem;
+}

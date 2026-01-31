@@ -1,0 +1,24 @@
+/* SGDS Custom Overrides for TraceCap */
+
+/* Override primary colors */
+.btn-primary {
+  background-color: var(--tracecap-primary);
+  border-color: var(--tracecap-primary);
+}
+
+.btn-primary:hover {
+  background-color: #005ba1;
+  border-color: #005ba1;
+}
+
+/* Card customizations */
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom spacing */
+.section-spacing {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}

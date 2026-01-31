@@ -1,0 +1,38 @@
+.error-message-container {
+  padding: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.error-message-container .alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.error-icon {
+  font-size: 2rem;
+  color: var(--tracecap-danger);
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #842029;
+}
+
+.error-text {
+  margin-bottom: 1rem;
+  color: #58151c;
+}
+
+.error-content button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

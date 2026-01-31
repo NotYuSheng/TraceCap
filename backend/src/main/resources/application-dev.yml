@@ -1,0 +1,43 @@
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.tracecap: DEBUG
+    org.springframework: DEBUG
+    org.hibernate: DEBUG
+  file:
+    name: logs/tracecap-dev.log
+
+# Development-specific MinIO (local)
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+
+# Development database (local PostgreSQL)
+spring.datasource:
+  url: jdbc:postgresql://localhost:5432/tracecap
+  username: tracecap_user
+  password: tracecap_pass
+
+# Disable production optimizations
+server:
+  compression:
+    enabled: false
+
+# Allow all origins in development
+cors:
+  allowed-origins: "*"
+  allow-credentials: false

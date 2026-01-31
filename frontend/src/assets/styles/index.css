@@ -1,0 +1,97 @@
+/* Import SGDS core styles */
+@import '@govtechsg/sgds/css/sgds.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Custom overrides */
+@import './sgds-overrides.css';
+
+/* Base styles */
+:root {
+  /* Custom variables for TraceCap theme */
+  --tracecap-primary: #0076d1;
+  --tracecap-secondary: #5925dc;
+  --tracecap-success: #1d8348;
+  --tracecap-danger: #c0392b;
+  --tracecap-warning: #f39c12;
+  --tracecap-info: #2980b9;
+
+  /* Network visualization colors */
+  --network-client: #3498db;
+  --network-server: #2ecc71;
+  --network-suspicious: #e74c3c;
+  --network-neutral: #95a5a6;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main Layout Styles */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-header {
+  background-color: var(--tracecap-primary);
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.main-header h2 {
+  margin: 0;
+}
+
+.main-header nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.main-header nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.main-header nav a:hover {
+  text-decoration: underline;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.main-footer {
+  background-color: #f8f9fa;
+  padding: 1rem 2rem;
+  text-align: center;
+  border-top: 1px solid #dee2e6;
+}
+
+.main-footer p {
+  margin: 0;
+  color: #6c757d;
+}
+
+/* Page Styles */
+.home-page,
+.upload-page,
+.analysis-page,
+.not-found-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}

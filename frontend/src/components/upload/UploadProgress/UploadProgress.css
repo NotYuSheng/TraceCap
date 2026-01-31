@@ -1,0 +1,72 @@
+.upload-progress {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.upload-progress.error {
+  border-color: var(--tracecap-danger);
+  background-color: #fff5f5;
+}
+
+.upload-progress.success {
+  border-color: var(--tracecap-success);
+  background-color: #f0fff4;
+}
+
+.upload-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-info i {
+  font-size: 1.5rem;
+  color: var(--tracecap-primary);
+}
+
+.file-name {
+  font-weight: 600;
+  color: #212529;
+}
+
+.upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-actions i {
+  font-size: 1.5rem;
+}
+
+.upload-progress-bar {
+  margin-bottom: 0.75rem;
+}
+
+.upload-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.status-text {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.error-text {
+  font-size: 0.85rem;
+  color: var(--tracecap-danger);
+}
