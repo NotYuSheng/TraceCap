@@ -30,6 +30,9 @@ A comprehensive network packet analysis tool that runs entirely self-hosted. Upl
 
 </div>
 
+> [!IMPORTANT]
+> This project is still in **early development**. While functional, it is currently **suboptimal for larger PCAP files** (>100MB). Performance optimizations and scalability improvements are planned for future releases. For best results, use with small to medium-sized capture files.
+
 ## Features
 
 | Feature | Description |
