@@ -72,6 +72,8 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: tracepcap-files
+      # Upload Configuration (from .env) - single source of truth
+      MAX_UPLOAD_SIZE_BYTES: ${MAX_UPLOAD_SIZE_BYTES:-536870912}
       # LLM Configuration (OpenAI API Format)
       LLM_API_BASE_URL: ${LLM_API_BASE_URL:-https://api.openai.com/v1}
       LLM_API_KEY: ${LLM_API_KEY:-your-api-key-here}
@@ -92,6 +94,9 @@ services:
       context: .
       dockerfile: ./nginx/Dockerfile
     container_name: tracepcap-nginx
+    environment:
+      # Upload Configuration (from .env)
+      MAX_UPLOAD_SIZE_BYTES: ${MAX_UPLOAD_SIZE_BYTES:-536870912}
     ports:
       - "8888:80"
     depends_on:

@@ -16,10 +16,10 @@ export const AnalysisPage = () => {
     const path = location.pathname
     if (path.includes('/conversations')) {
       setActiveTab('conversations')
-    } else if (path.includes('/timeline')) {
-      setActiveTab('timeline')
     } else if (path.includes('/story')) {
       setActiveTab('story')
+    } else if (path.includes('/filter-generator')) {
+      setActiveTab('filter-generator')
     } else {
       setActiveTab('overview')
     }
@@ -84,18 +84,18 @@ export const AnalysisPage = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link ${activeTab === 'timeline' ? 'active' : ''}`}
-            onClick={() => handleTabChange('timeline')}
-          >
-            Timeline
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
             className={`nav-link ${activeTab === 'story' ? 'active' : ''}`}
             onClick={() => handleTabChange('story')}
           >
             Story
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === 'filter-generator' ? 'active' : ''}`}
+            onClick={() => handleTabChange('filter-generator')}
+          >
+            Filter Generator
           </button>
         </li>
       </ul>

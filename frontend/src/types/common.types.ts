@@ -218,3 +218,27 @@ export interface Session {
   totalBytes: number
   purpose?: string
 }
+
+// Filter Generator Types
+export interface FilterGenerationRequest {
+  fileId: string
+  naturalLanguageQuery: string
+}
+
+export interface FilterGenerationResponse {
+  filter: string
+  explanation: string
+  confidence: number
+  suggestions?: string[]
+}
+
+export interface FilterExecutionRequest {
+  fileId: string
+  filter: string
+}
+
+export interface FilterExecutionResponse {
+  packets: Packet[]
+  totalMatches: number
+  executionTime: number
+}

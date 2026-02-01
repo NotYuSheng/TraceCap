@@ -68,7 +68,7 @@ export const FileUploadZone = ({
               Browse Files
             </button>
             <p className="upload-hint">
-              Supported formats: {acceptedFileTypes.join(', ')} (Max {maxSize / 1024 / 1024}MB)
+              Supported formats: {acceptedFileTypes.join(', ')} (Max {Math.round(maxSize / 1024 / 1024)}MB)
             </p>
           </>
         )}

@@ -7,7 +7,7 @@ server {
     server_name localhost;
     root /usr/share/nginx/html;
     index index.html;
-    client_max_body_size 512M;
+    client_max_body_size ${MAX_UPLOAD_SIZE_NGINX};
 
     # Gzip compression
     gzip on;
