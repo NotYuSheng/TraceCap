@@ -25,6 +25,36 @@ export const FilterGeneratorPage = () => {
   const [selectedPacket, setSelectedPacket] = useState<Packet | null>(null)
   const [showCheatSheet, setShowCheatSheet] = useState(false)
 
+  const validateFilter = (filter: string): { valid: boolean; message?: string } => {
+    const trimmed = filter.trim()
+
+    // Check if filter is empty
+    if (!trimmed) {
+      return {
+        valid: false,
+        message: 'The AI generated an empty filter. This usually means the LLM service is not responding correctly or your query was too vague. Try a more specific query like "HTTP traffic" or "DNS queries".'
+      }
+    }
+
+    // Check for common invalid patterns
+    if (trimmed.includes('undefined') || trimmed.includes('null')) {
+      return {
+        valid: false,
+        message: 'The AI generated an incomplete filter. The LLM service may not be configured properly.'
+      }
+    }
+
+    // Check minimum length
+    if (trimmed.length < 2) {
+      return {
+        valid: false,
+        message: 'The generated filter is too short to be valid. Try rephrasing your query.'
+      }
+    }
+
+    return { valid: true }
+  }
+
   const handleGenerateFilter = async () => {
     if (!query.trim()) {
       setError('Please enter a query')
@@ -35,6 +65,16 @@ export const FilterGeneratorPage = () => {
       setGenerating(true)
       setError(null)
       const result = await filterService.generateFilter(fileId, query)
+
+      // Validate the generated filter
+      const validation = validateFilter(result.filter)
+      if (!validation.valid) {
+        setError(`❌ Invalid Filter Generated: ${validation.message}`)
+        setGeneratedFilter('')
+        setEditableFilter('')
+        return
+      }
+
       setGeneratedFilter(result.filter)
       setEditableFilter(result.filter)
       setExplanation(result.explanation)
@@ -45,7 +85,15 @@ export const FilterGeneratorPage = () => {
       setTotalMatches(0)
       setExecutionTime(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate filter')
+      // Provide helpful error message for common issues
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      if (errorMsg.includes('500') || errorMsg.includes('LLM') || errorMsg.includes('Failed to generate')) {
+        setError('🔴 LLM Service Unavailable: The AI service at http://100.64.0.1:1234 is not responding. Please start LM Studio or another OpenAI-compatible LLM server, then try again.')
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('ECONNREFUSED')) {
+        setError('🔴 Connection Failed: Cannot reach the LLM service. Make sure it\'s running on http://100.64.0.1:1234')
+      } else {
+        setError(`❌ Error: ${errorMsg || 'Failed to generate filter'}`)
+      }
     } finally {
       setGenerating(false)
     }
@@ -65,7 +113,18 @@ export const FilterGeneratorPage = () => {
       setTotalMatches(result.totalMatches)
       setExecutionTime(result.executionTime)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to execute filter')
+      // Provide specific error message based on the error type
+      const errorMsg = err instanceof Error ? err.message : String(err)
+
+      if (errorMsg.includes('syntax error') || errorMsg.includes('BPF') || errorMsg.includes('parse filter')) {
+        setError(`❌ Invalid BPF Syntax: The filter "${editableFilter}" is not valid BPF syntax. Common valid filters: "tcp port 80", "udp port 53", "host 192.168.1.1", "icmp". Check the BPF Cheat Sheet for help.`)
+      } else if (errorMsg.includes('500')) {
+        setError('🔴 Server Error: The backend encountered an error while executing the filter. This might be due to invalid syntax or a server issue.')
+      } else if (errorMsg.includes('404')) {
+        setError('❌ File Not Found: The PCAP file could not be found. It may have been deleted.')
+      } else {
+        setError(`❌ Execution Failed: ${errorMsg || 'Unknown error occurred'}`)
+      }
     } finally {
       setExecuting(false)
     }
@@ -247,6 +306,38 @@ export const FilterGeneratorPage = () => {
                 onClick={() => setError(null)}
                 aria-label="Close"
               ></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Results Message */}
+      {!error && executionTime !== null && packets.length === 0 && (
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="alert alert-info" role="alert">
+              <h5 className="alert-heading">
+                <i className="bi bi-info-circle me-2"></i>
+                No Matching Packets Found
+              </h5>
+              <p className="mb-2">
+                The filter <code className="text-dark bg-light px-2 py-1 rounded">{editableFilter}</code> is valid but didn't match any packets in this PCAP file.
+              </p>
+              <hr />
+              <p className="mb-0">
+                <strong>Suggestions:</strong>
+              </p>
+              <ul className="mb-0">
+                <li>Try a broader filter (e.g., just "tcp" or "udp")</li>
+                <li>Check if the PCAP file contains the type of traffic you're looking for</li>
+                <li>Modify the port numbers, IP addresses, or protocol if they don't match the capture</li>
+                <li>Generate a new filter with a different query</li>
+              </ul>
+              {executionTime !== null && (
+                <div className="mt-2">
+                  <small className="text-muted">Execution time: {executionTime}ms</small>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -467,20 +558,6 @@ export const FilterGeneratorPage = () => {
         </div>
       )}
 
-      {/* Empty State */}
-      {!generatedFilter && !generating && (
-        <div className="row">
-          <div className="col-12">
-            <div className="text-center py-5">
-              <i className="bi bi-funnel" style={{ fontSize: '4rem', opacity: 0.3 }}></i>
-              <h5 className="mt-3 text-muted">No Filter Generated Yet</h5>
-              <p className="text-muted">
-                Enter a natural language query above to generate a pcap filter
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

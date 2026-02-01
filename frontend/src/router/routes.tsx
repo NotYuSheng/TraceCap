@@ -6,6 +6,7 @@ import { AnalysisOverview } from '@pages/Analysis/AnalysisOverview'
 import { ConversationPage } from '@pages/Conversation'
 import { StoryPage } from '@pages/Story'
 import { FilterGeneratorPage } from '@pages/FilterGenerator'
+import { NetworkDiagramPage } from '@pages/NetworkDiagram'
 import { NotFoundPage } from '@pages/NotFound'
 
 export const router = createBrowserRouter([
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
           {
             path: 'filter-generator',
             element: <FilterGeneratorPage />,
+          },
+          {
+            path: 'network-diagram',
+            element: <NetworkDiagramPage />,
           },
         ],
       },
