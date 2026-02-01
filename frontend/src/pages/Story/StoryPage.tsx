@@ -202,7 +202,7 @@ export const StoryPage = () => {
 
         {/* Story Event Timeline Section */}
         <div className="col-lg-4">
-          <div className="card sticky-top" style={{ top: '20px' }}>
+          <div className="card sticky-top" style={{ top: '20px', zIndex: 10 }}>
             <div className="card-body">
               <h5 className="mb-3">Key Events</h5>
               {story.timeline && story.timeline.length > 0 ? (

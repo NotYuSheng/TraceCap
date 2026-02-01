@@ -17,8 +17,12 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Install libpcap for PCAP file parsing (required by Pcap4J)
-RUN apk add --no-cache libpcap libpcap-dev
+# Install libpcap for PCAP file parsing (required by Pcap4J) and tzdata for timezone
+RUN apk add --no-cache libpcap libpcap-dev tzdata
+
+# Set timezone to Singapore
+ENV TZ=Asia/Singapore
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Create a non-root user
 RUN addgroup -S spring && adduser -S spring -G spring

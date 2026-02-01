@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,4 +25,9 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
      * Find files by status
      */
     Page<FileEntity> findByStatus(FileEntity.FileStatus status, Pageable pageable);
+
+    /**
+     * Find files uploaded before the specified timestamp (for cleanup)
+     */
+    List<FileEntity> findByUploadedAtBefore(LocalDateTime timestamp);
 }

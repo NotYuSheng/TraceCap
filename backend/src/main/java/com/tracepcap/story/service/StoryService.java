@@ -260,14 +260,30 @@ public class StoryService {
             // Parse JSON
             Map<String, Object> data = objectMapper.readValue(jsonContent, new TypeReference<>() {});
 
-            // Parse narrative sections
+            // Parse narrative sections (required)
             List<NarrativeSection> narrative = parseNarrativeSections(data.get("narrative"));
+            if (narrative.isEmpty()) {
+                log.warn("No narrative sections found in LLM response, adding default section");
+                narrative.add(NarrativeSection.builder()
+                        .title("Analysis Summary")
+                        .content("Unable to generate detailed narrative. Please try regenerating the story.")
+                        .type(NarrativeSection.SectionType.summary)
+                        .relatedData(NarrativeSection.RelatedData.builder()
+                                .packets(new ArrayList<>())
+                                .conversations(new ArrayList<>())
+                                .hosts(new ArrayList<>())
+                                .build())
+                        .build());
+            }
 
-            // Parse highlights
+            // Parse highlights (optional)
             List<Highlight> highlights = parseHighlights(data.get("highlights"));
 
-            // Parse timeline
+            // Parse timeline (optional)
             List<StoryTimelineEvent> timeline = parseTimeline(data.get("timeline"));
+
+            log.info("Successfully parsed story: {} narrative sections, {} highlights, {} timeline events",
+                    narrative.size(), highlights.size(), timeline.size());
 
             return StoryResponse.builder()
                     .id(storyId.toString())
@@ -279,7 +295,8 @@ public class StoryService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to parse LLM response", e);
+            log.error("Failed to parse LLM response: {}", e.getMessage(), e);
+            log.debug("LLM response content: {}", content);
             throw new RuntimeException("Failed to parse LLM response: " + e.getMessage(), e);
         }
     }
@@ -288,14 +305,24 @@ public class StoryService {
      * Extract JSON from LLM response
      */
     private String extractJson(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new RuntimeException("Empty LLM response");
+        }
+
+        // Remove markdown code blocks if present
+        content = content.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+
         // Find first { and last }
         int start = content.indexOf('{');
         int end = content.lastIndexOf('}');
 
         if (start >= 0 && end > start) {
-            return content.substring(start, end + 1);
+            String json = content.substring(start, end + 1);
+            log.debug("Extracted JSON from LLM response, length: {}", json.length());
+            return json;
         }
 
+        log.warn("Could not extract JSON from LLM response, using raw content");
         return content;
     }
 
@@ -306,21 +333,29 @@ public class StoryService {
     private List<NarrativeSection> parseNarrativeSections(Object data) {
         if (data == null) return new ArrayList<>();
 
-        List<Map<String, Object>> sections = (List<Map<String, Object>>) data;
-        return sections.stream().map(section -> {
-            Map<String, Object> relatedData = (Map<String, Object>) section.getOrDefault("relatedData", new HashMap<>());
+        try {
+            List<Map<String, Object>> sections = (List<Map<String, Object>>) data;
+            return sections.stream()
+                    .filter(section -> section != null && section.get("title") != null && section.get("content") != null)
+                    .map(section -> {
+                        Map<String, Object> relatedData = (Map<String, Object>) section.getOrDefault("relatedData", new HashMap<>());
 
-            return NarrativeSection.builder()
-                    .title((String) section.get("title"))
-                    .content((String) section.get("content"))
-                    .type(NarrativeSection.SectionType.valueOf((String) section.getOrDefault("type", "detail")))
-                    .relatedData(NarrativeSection.RelatedData.builder()
-                            .packets(convertToStringList(relatedData.get("packets")))
-                            .conversations(convertToStringList(relatedData.get("conversations")))
-                            .hosts(convertToStringList(relatedData.get("hosts")))
-                            .build())
-                    .build();
-        }).collect(Collectors.toList());
+                        return NarrativeSection.builder()
+                                .title((String) section.get("title"))
+                                .content((String) section.get("content"))
+                                .type(parseSectionType((String) section.getOrDefault("type", "detail")))
+                                .relatedData(NarrativeSection.RelatedData.builder()
+                                        .packets(convertToStringList(relatedData.get("packets")))
+                                        .conversations(convertToStringList(relatedData.get("conversations")))
+                                        .hosts(convertToStringList(relatedData.get("hosts")))
+                                        .build())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error parsing narrative sections", e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -330,19 +365,37 @@ public class StoryService {
     private List<Highlight> parseHighlights(Object data) {
         if (data == null) return new ArrayList<>();
 
-        List<Map<String, Object>> highlights = (List<Map<String, Object>>) data;
-        return highlights.stream().map(h -> {
-            Object timestamp = h.get("timestamp");
-            Long ts = timestamp != null ? ((Number) timestamp).longValue() : null;
+        try {
+            List<Map<String, Object>> highlights = (List<Map<String, Object>>) data;
+            return highlights.stream()
+                    .filter(h -> h != null && h.get("title") != null)
+                    .map(h -> {
+                        Object timestamp = h.get("timestamp");
+                        Long ts = null;
+                        try {
+                            ts = timestamp != null ? ((Number) timestamp).longValue() : null;
+                        } catch (Exception e) {
+                            log.warn("Invalid timestamp value: {}", timestamp);
+                        }
 
-            return Highlight.builder()
-                    .id((String) h.get("id"))
-                    .type(Highlight.HighlightType.valueOf((String) h.getOrDefault("type", "info")))
-                    .title((String) h.get("title"))
-                    .description((String) h.get("description"))
-                    .timestamp(ts)
-                    .build();
-        }).collect(Collectors.toList());
+                        String id = (String) h.get("id");
+                        if (id == null) {
+                            id = "h" + UUID.randomUUID().toString().substring(0, 8);
+                        }
+
+                        return Highlight.builder()
+                                .id(id)
+                                .type(parseHighlightType((String) h.getOrDefault("type", "info")))
+                                .title((String) h.get("title"))
+                                .description((String) h.getOrDefault("description", ""))
+                                .timestamp(ts)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error parsing highlights", e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -352,22 +405,37 @@ public class StoryService {
     private List<StoryTimelineEvent> parseTimeline(Object data) {
         if (data == null) return new ArrayList<>();
 
-        List<Map<String, Object>> events = (List<Map<String, Object>>) data;
-        return events.stream().map(event -> {
-            Map<String, Object> relatedData = (Map<String, Object>) event.getOrDefault("relatedData", new HashMap<>());
-            Object timestamp = event.get("timestamp");
+        try {
+            List<Map<String, Object>> events = (List<Map<String, Object>>) data;
+            return events.stream()
+                    .filter(event -> event != null && event.get("title") != null)
+                    .map(event -> {
+                        Map<String, Object> relatedData = (Map<String, Object>) event.getOrDefault("relatedData", new HashMap<>());
+                        Object timestamp = event.get("timestamp");
 
-            return StoryTimelineEvent.builder()
-                    .timestamp(timestamp != null ? ((Number) timestamp).longValue() : null)
-                    .title((String) event.get("title"))
-                    .description((String) event.get("description"))
-                    .type(StoryTimelineEvent.EventType.valueOf((String) event.getOrDefault("type", "normal")))
-                    .relatedData(StoryTimelineEvent.RelatedData.builder()
-                            .packets(convertToStringList(relatedData.get("packets")))
-                            .conversations(convertToStringList(relatedData.get("conversations")))
-                            .build())
-                    .build();
-        }).collect(Collectors.toList());
+                        Long ts = null;
+                        try {
+                            ts = timestamp != null ? ((Number) timestamp).longValue() : null;
+                        } catch (Exception e) {
+                            log.warn("Invalid timestamp value: {}", timestamp);
+                        }
+
+                        return StoryTimelineEvent.builder()
+                                .timestamp(ts)
+                                .title((String) event.get("title"))
+                                .description((String) event.getOrDefault("description", ""))
+                                .type(parseEventType((String) event.getOrDefault("type", "normal")))
+                                .relatedData(StoryTimelineEvent.RelatedData.builder()
+                                        .packets(convertToStringList(relatedData.get("packets")))
+                                        .conversations(convertToStringList(relatedData.get("conversations")))
+                                        .build())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error parsing timeline events", e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -397,5 +465,53 @@ public class StoryService {
                     }
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Safely parse SectionType enum with case-insensitive matching and fallback
+     */
+    private NarrativeSection.SectionType parseSectionType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return NarrativeSection.SectionType.detail;
+        }
+
+        try {
+            return NarrativeSection.SectionType.valueOf(type.toLowerCase().trim());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid section type '{}', using default 'detail'", type);
+            return NarrativeSection.SectionType.detail;
+        }
+    }
+
+    /**
+     * Safely parse HighlightType enum with case-insensitive matching and fallback
+     */
+    private Highlight.HighlightType parseHighlightType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return Highlight.HighlightType.info;
+        }
+
+        try {
+            return Highlight.HighlightType.valueOf(type.toLowerCase().trim());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid highlight type '{}', using default 'info'", type);
+            return Highlight.HighlightType.info;
+        }
+    }
+
+    /**
+     * Safely parse EventType enum with case-insensitive matching and fallback
+     */
+    private StoryTimelineEvent.EventType parseEventType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return StoryTimelineEvent.EventType.normal;
+        }
+
+        try {
+            return StoryTimelineEvent.EventType.valueOf(type.toLowerCase().trim());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid event type '{}', using default 'normal'", type);
+            return StoryTimelineEvent.EventType.normal;
+        }
     }
 }

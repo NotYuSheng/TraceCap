@@ -18,8 +18,12 @@ RUN npm run build
 # Stage 2: Serve with nginx and proxy to backend
 FROM nginx:alpine
 
-# Install gettext for envsubst (used in entrypoint script)
-RUN apk add --no-cache gettext
+# Install gettext for envsubst (used in entrypoint script) and tzdata for timezone
+RUN apk add --no-cache gettext tzdata
+
+# Set timezone to Singapore
+ENV TZ=Asia/Singapore
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
