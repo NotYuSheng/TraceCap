@@ -98,7 +98,7 @@ services:
       # Upload Configuration (from .env)
       MAX_UPLOAD_SIZE_BYTES: ${MAX_UPLOAD_SIZE_BYTES:-536870912}
     ports:
-      - "8888:80"
+      - "${NGINX_PORT:-80}:80"
     depends_on:
       - backend
     networks:

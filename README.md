@@ -65,13 +65,16 @@ A comprehensive network packet analysis tool that runs entirely self-hosted. Upl
 ```bash
 git clone https://github.com/NotYuSheng/TracePcap.git
 cd TracePcap
-cp .env .env.local  # Optional: customize your configuration
+cp .env.example .env
 ```
 
 **2. Configure `.env`:**
 ```env
 # Upload Configuration
 MAX_UPLOAD_SIZE_BYTES=536870912  # 512MB default
+
+# Nginx Port Configuration
+NGINX_PORT=80  # Change if port 80 is already in use
 
 # LLM Configuration (Local LLM Server)
 LLM_API_BASE_URL=http://localhost:1234/v1
@@ -88,7 +91,7 @@ docker compose up -d
 
 **4. Access TracePcap:**
 
-Open **http://localhost:8888** in your browser.
+Open **http://localhost:80** in your browser.
 
 > **Note**: The application includes PostgreSQL for metadata storage and MinIO for PCAP file storage. First startup may take a few minutes while containers initialize.
 
@@ -195,7 +198,7 @@ Navigate to **http://localhost:9001** and login with:
 
 ### Access Swagger API Documentation
 
-Navigate to **http://localhost:8888/api/swagger-ui.html** to explore the API interactively.
+Navigate to **http://localhost:80/swagger-ui.html** to explore the API interactively.
 
 ## Deployment
 
