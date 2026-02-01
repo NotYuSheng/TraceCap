@@ -99,18 +99,6 @@ Open **http://localhost:80** in your browser.
 
 ### Basic Workflow
 
-```mermaid
-graph LR
-    A[Upload PCAP File] --> B[Automatic Analysis]
-    B --> C[View Network Diagram]
-    B --> D[Explore Timeline]
-    B --> E[Review Conversations]
-    C --> F[Generate Filters]
-    D --> F
-    E --> F
-    F --> G[Export/Apply Filters]
-```
-
 1. **Upload** - Navigate to the Upload page and drag-and-drop your PCAP file or click to browse
 2. **Analyze** - File is automatically processed and analyzed for network patterns
 3. **Visualize** - View interactive 3D network topology showing hosts and communication flows
