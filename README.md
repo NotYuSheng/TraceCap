@@ -266,7 +266,3 @@ docker compose up postgres minio -d
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">Built with ❤️ for network engineers, security researchers, and protocol enthusiasts</p>
