@@ -39,17 +39,29 @@ export const timelineService = {
   /**
    * Get timeline data for a PCAP file
    * @param fileId - The file ID to get timeline for
+   * @param maxDataPoints - Optional maximum number of data points to return
    * @returns Timeline data points
    */
-  getTimelineData: async (fileId: string): Promise<TimelineDataPoint[]> => {
+  getTimelineData: async (
+    fileId: string,
+    maxDataPoints?: number
+  ): Promise<TimelineDataPoint[]> => {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 700));
       return mockTimelineData;
     }
 
-    const response = await apiClient.get<TimelineApiResponse[]>(
-      API_ENDPOINTS.TIMELINE_DATA(fileId)
-    );
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (maxDataPoints !== undefined) {
+      params.append('maxDataPoints', maxDataPoints.toString());
+    }
+
+    const url = params.toString()
+      ? `${API_ENDPOINTS.TIMELINE_DATA(fileId)}?${params.toString()}`
+      : API_ENDPOINTS.TIMELINE_DATA(fileId);
+
+    const response = await apiClient.get<TimelineApiResponse[]>(url);
 
     // Transform backend response to frontend format
     return response.data.map(transformTimelineData);
@@ -60,12 +72,14 @@ export const timelineService = {
    * @param fileId - The file ID
    * @param start - Start timestamp
    * @param end - End timestamp
+   * @param maxDataPoints - Optional maximum number of data points to return
    * @returns Timeline data points for the specified range
    */
   getTimelineRange: async (
     fileId: string,
     start: number,
-    end: number
+    end: number,
+    maxDataPoints?: number
   ): Promise<TimelineDataPoint[]> => {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -76,8 +90,17 @@ export const timelineService = {
     const startISO = new Date(start).toISOString();
     const endISO = new Date(end).toISOString();
 
+    // Build query parameters
+    const params = new URLSearchParams({
+      start: startISO,
+      end: endISO,
+    });
+    if (maxDataPoints !== undefined) {
+      params.append('maxDataPoints', maxDataPoints.toString());
+    }
+
     const response = await apiClient.get<TimelineApiResponse[]>(
-      `/api/timeline/${fileId}/range?start=${startISO}&end=${endISO}`
+      `/api/timeline/${fileId}/range?${params.toString()}`
     );
 
     // Transform backend response to frontend format
