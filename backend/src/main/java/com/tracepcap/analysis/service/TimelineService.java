@@ -217,6 +217,11 @@ public class TimelineService {
    */
   private Integer calculateOptimalInterval(
       LocalDateTime start, LocalDateTime end, Integer requestedInterval, Integer maxDataPoints) {
+    // Defensive check for invalid interval
+    if (requestedInterval <= 0) {
+      throw new IllegalArgumentException("Interval must be positive");
+    }
+
     // Use config default if not provided
     int limit =
         maxDataPoints != null ? maxDataPoints : analysisProperties.getMaxTimelineDataPoints();

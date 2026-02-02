@@ -36,6 +36,11 @@ public class TimelineController {
     log.info(
         "GET /api/timeline/{} with interval {}s and maxDataPoints {}", fileId, interval, maxDataPoints);
 
+    // Validate interval parameter
+    if (interval < 1) {
+      throw new IllegalArgumentException("interval must be at least 1 second");
+    }
+
     // Validate maxDataPoints if provided
     if (maxDataPoints != null && (maxDataPoints < 10 || maxDataPoints > 10000)) {
       throw new IllegalArgumentException("maxDataPoints must be between 10 and 10000");
@@ -71,6 +76,11 @@ public class TimelineController {
         interval,
         maxDataPoints);
 
+    // Validate interval parameter
+    if (interval < 1) {
+      throw new IllegalArgumentException("interval must be at least 1 second");
+    }
+
     // Validate maxDataPoints if provided
     if (maxDataPoints != null && (maxDataPoints < 10 || maxDataPoints > 10000)) {
       throw new IllegalArgumentException("maxDataPoints must be between 10 and 10000");
@@ -78,6 +88,11 @@ public class TimelineController {
 
     LocalDateTime startTime = LocalDateTime.parse(start);
     LocalDateTime endTime = LocalDateTime.parse(end);
+
+    // Validate time range
+    if (!startTime.isBefore(endTime)) {
+      throw new IllegalArgumentException("start time must be before end time");
+    }
 
     List<TimelineDataDto> timeline =
         timelineService.getTimelineDataForRange(fileId, startTime, endTime, interval, maxDataPoints);

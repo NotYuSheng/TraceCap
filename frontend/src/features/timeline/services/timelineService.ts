@@ -57,9 +57,8 @@ export const timelineService = {
       params.append('maxDataPoints', maxDataPoints.toString());
     }
 
-    const url = params.toString()
-      ? `${API_ENDPOINTS.TIMELINE_DATA(fileId)}?${params.toString()}`
-      : API_ENDPOINTS.TIMELINE_DATA(fileId);
+    const queryString = params.toString();
+    const url = `${API_ENDPOINTS.TIMELINE_DATA(fileId)}${queryString ? `?${queryString}` : ''}`;
 
     const response = await apiClient.get<TimelineApiResponse[]>(url);
 
