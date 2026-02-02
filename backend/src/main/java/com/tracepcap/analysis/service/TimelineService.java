@@ -23,16 +23,18 @@ public class TimelineService {
 
     private final FileRepository fileRepository;
     private final ConversationRepository conversationRepository;
+    private final com.tracepcap.config.AnalysisProperties analysisProperties;
 
     /**
      * Get timeline data for a file with specified interval
      *
-     * @param fileId   The file ID
-     * @param interval Time interval in seconds for binning
+     * @param fileId        The file ID
+     * @param interval      Time interval in seconds for binning
+     * @param maxDataPoints Maximum number of data points (null to use config default)
      * @return List of timeline data points
      */
     @Transactional(readOnly = true)
-    public List<TimelineDataDto> getTimelineData(UUID fileId, Integer interval) {
+    public List<TimelineDataDto> getTimelineData(UUID fileId, Integer interval, Integer maxDataPoints) {
         log.info("Generating timeline data for file {} with {}s intervals", fileId, interval);
 
         // Verify file exists
@@ -63,21 +65,25 @@ public class TimelineService {
                     .orElse(LocalDateTime.now());
         }
 
-        return generateTimelineBins(conversations, startTime, endTime, interval);
+        // Calculate optimal interval respecting maxDataPoints limit
+        Integer optimalInterval = calculateOptimalInterval(startTime, endTime, interval, maxDataPoints);
+
+        return generateTimelineBins(conversations, startTime, endTime, optimalInterval);
     }
 
     /**
      * Get timeline data for a specific time range
      *
-     * @param fileId    The file ID
-     * @param startTime Start of time range
-     * @param endTime   End of time range
-     * @param interval  Time interval in seconds for binning
+     * @param fileId        The file ID
+     * @param startTime     Start of time range
+     * @param endTime       End of time range
+     * @param interval      Time interval in seconds for binning
+     * @param maxDataPoints Maximum number of data points (null to use config default)
      * @return List of timeline data points
      */
     @Transactional(readOnly = true)
     public List<TimelineDataDto> getTimelineDataForRange(
-            UUID fileId, LocalDateTime startTime, LocalDateTime endTime, Integer interval) {
+            UUID fileId, LocalDateTime startTime, LocalDateTime endTime, Integer interval, Integer maxDataPoints) {
         log.info("Generating timeline data for file {} from {} to {} with {}s intervals",
                 fileId, startTime, endTime, interval);
 
@@ -94,7 +100,10 @@ public class TimelineService {
                         !conv.getStartTime().isAfter(endTime))
                 .collect(Collectors.toList());
 
-        return generateTimelineBins(filteredConversations, startTime, endTime, interval);
+        // Calculate optimal interval respecting maxDataPoints limit
+        Integer optimalInterval = calculateOptimalInterval(startTime, endTime, interval, maxDataPoints);
+
+        return generateTimelineBins(filteredConversations, startTime, endTime, optimalInterval);
     }
 
     /**
@@ -183,6 +192,47 @@ public class TimelineService {
         }
 
         return null;
+    }
+
+    /**
+     * Calculate optimal interval to respect maxDataPoints limit
+     *
+     * @param start             Start time
+     * @param end               End time
+     * @param requestedInterval Requested interval in seconds
+     * @param maxDataPoints     Maximum number of data points (null to use config default)
+     * @return Optimal interval in seconds
+     */
+    private Integer calculateOptimalInterval(LocalDateTime start, LocalDateTime end,
+                                              Integer requestedInterval, Integer maxDataPoints) {
+        // Use config default if not provided
+        int limit = maxDataPoints != null ? maxDataPoints : analysisProperties.getMaxTimelineDataPoints();
+
+        // If auto-adjust is disabled, return requested interval
+        if (!analysisProperties.isAutoAdjustInterval()) {
+            return requestedInterval;
+        }
+
+        // Calculate duration and expected bin count
+        long durationSeconds = ChronoUnit.SECONDS.between(start, end);
+        long expectedBins = durationSeconds / requestedInterval;
+
+        // If within limit, no adjustment needed
+        if (expectedBins <= limit) {
+            return requestedInterval;
+        }
+
+        // Calculate minimum interval to stay under limit
+        int adjustedInterval = (int) Math.ceil((double) durationSeconds / limit);
+
+        // Enforce minimum interval constraint
+        adjustedInterval = Math.max(adjustedInterval, analysisProperties.getMinTimelineInterval());
+
+        log.info("Timeline auto-adjusted: duration={}s, requestedInterval={}s, " +
+                        "adjustedInterval={}s, expectedBins={}, limit={}",
+                durationSeconds, requestedInterval, adjustedInterval, expectedBins, limit);
+
+        return adjustedInterval;
     }
 
     /**

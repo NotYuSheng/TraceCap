@@ -25,27 +25,35 @@ public class TimelineController {
     /**
      * Get timeline data for a file with binned traffic statistics
      *
-     * @param fileId   The file ID
-     * @param interval The time interval in seconds for binning (default: 60)
+     * @param fileId        The file ID
+     * @param interval      The time interval in seconds for binning (default: 60)
+     * @param maxDataPoints Maximum number of data points to return (optional, uses config default if not provided)
      * @return List of timeline data points
      */
     @GetMapping("/{fileId}")
     public ResponseEntity<List<TimelineDataDto>> getTimeline(
             @PathVariable UUID fileId,
-            @RequestParam(defaultValue = "60") Integer interval) {
-        log.info("GET /api/timeline/{} with interval {}s", fileId, interval);
+            @RequestParam(defaultValue = "60") Integer interval,
+            @RequestParam(required = false) Integer maxDataPoints) {
+        log.info("GET /api/timeline/{} with interval {}s and maxDataPoints {}", fileId, interval, maxDataPoints);
 
-        List<TimelineDataDto> timeline = timelineService.getTimelineData(fileId, interval);
+        // Validate maxDataPoints if provided
+        if (maxDataPoints != null && (maxDataPoints < 10 || maxDataPoints > 10000)) {
+            throw new IllegalArgumentException("maxDataPoints must be between 10 and 10000");
+        }
+
+        List<TimelineDataDto> timeline = timelineService.getTimelineData(fileId, interval, maxDataPoints);
         return ResponseEntity.ok(timeline);
     }
 
     /**
      * Get timeline data for a specific time range
      *
-     * @param fileId   The file ID
-     * @param start    Start timestamp (ISO 8601 format)
-     * @param end      End timestamp (ISO 8601 format)
-     * @param interval The time interval in seconds for binning (default: 60)
+     * @param fileId        The file ID
+     * @param start         Start timestamp (ISO 8601 format)
+     * @param end           End timestamp (ISO 8601 format)
+     * @param interval      The time interval in seconds for binning (default: 60)
+     * @param maxDataPoints Maximum number of data points to return (optional, uses config default if not provided)
      * @return List of timeline data points
      */
     @GetMapping("/{fileId}/range")
@@ -53,15 +61,21 @@ public class TimelineController {
             @PathVariable UUID fileId,
             @RequestParam String start,
             @RequestParam String end,
-            @RequestParam(defaultValue = "60") Integer interval) {
-        log.info("GET /api/timeline/{}/range from {} to {} with interval {}s",
-                fileId, start, end, interval);
+            @RequestParam(defaultValue = "60") Integer interval,
+            @RequestParam(required = false) Integer maxDataPoints) {
+        log.info("GET /api/timeline/{}/range from {} to {} with interval {}s and maxDataPoints {}",
+                fileId, start, end, interval, maxDataPoints);
+
+        // Validate maxDataPoints if provided
+        if (maxDataPoints != null && (maxDataPoints < 10 || maxDataPoints > 10000)) {
+            throw new IllegalArgumentException("maxDataPoints must be between 10 and 10000");
+        }
 
         LocalDateTime startTime = LocalDateTime.parse(start);
         LocalDateTime endTime = LocalDateTime.parse(end);
 
         List<TimelineDataDto> timeline = timelineService.getTimelineDataForRange(
-                fileId, startTime, endTime, interval);
+                fileId, startTime, endTime, interval, maxDataPoints);
         return ResponseEntity.ok(timeline);
     }
 }
