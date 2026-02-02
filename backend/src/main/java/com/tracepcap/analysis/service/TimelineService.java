@@ -7,6 +7,7 @@ import com.tracepcap.common.exception.ResourceNotFoundException;
 import com.tracepcap.file.entity.FileEntity;
 import com.tracepcap.file.repository.FileRepository;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -21,16 +22,19 @@ public class TimelineService {
 
   private final FileRepository fileRepository;
   private final ConversationRepository conversationRepository;
+  private final com.tracepcap.config.AnalysisProperties analysisProperties;
 
   /**
    * Get timeline data for a file with specified interval
    *
    * @param fileId The file ID
    * @param interval Time interval in seconds for binning
+   * @param maxDataPoints Maximum number of data points (null to use config default)
    * @return List of timeline data points
    */
   @Transactional(readOnly = true)
-  public List<TimelineDataDto> getTimelineData(UUID fileId, Integer interval) {
+  public List<TimelineDataDto> getTimelineData(
+      UUID fileId, Integer interval, Integer maxDataPoints) {
     log.info("Generating timeline data for file {} with {}s intervals", fileId, interval);
 
     // Verify file exists
@@ -65,7 +69,10 @@ public class TimelineService {
               .orElse(LocalDateTime.now());
     }
 
-    return generateTimelineBins(conversations, startTime, endTime, interval);
+    // Calculate optimal interval respecting maxDataPoints limit
+    Integer optimalInterval = calculateOptimalInterval(startTime, endTime, interval, maxDataPoints);
+
+    return generateTimelineBins(conversations, startTime, endTime, optimalInterval);
   }
 
   /**
@@ -75,11 +82,12 @@ public class TimelineService {
    * @param startTime Start of time range
    * @param endTime End of time range
    * @param interval Time interval in seconds for binning
+   * @param maxDataPoints Maximum number of data points (null to use config default)
    * @return List of timeline data points
    */
   @Transactional(readOnly = true)
   public List<TimelineDataDto> getTimelineDataForRange(
-      UUID fileId, LocalDateTime startTime, LocalDateTime endTime, Integer interval) {
+      UUID fileId, LocalDateTime startTime, LocalDateTime endTime, Integer interval, Integer maxDataPoints) {
     log.info(
         "Generating timeline data for file {} from {} to {} with {}s intervals",
         fileId,
@@ -103,11 +111,15 @@ public class TimelineService {
                     !conv.getEndTime().isBefore(startTime) && !conv.getStartTime().isAfter(endTime))
             .collect(Collectors.toList());
 
-    return generateTimelineBins(filteredConversations, startTime, endTime, interval);
+    // Calculate optimal interval respecting maxDataPoints limit
+    Integer optimalInterval = calculateOptimalInterval(startTime, endTime, interval, maxDataPoints);
+
+    return generateTimelineBins(filteredConversations, startTime, endTime, optimalInterval);
   }
 
   /**
    * Generate timeline bins by aggregating conversation data into time intervals
+   * Optimized to O(M) complexity by calculating bin indices directly
    *
    * @param conversations List of conversations
    * @param startTime Start time
@@ -135,17 +147,30 @@ public class TimelineService {
       bins.put(binStart, new TimelineBinData());
     }
 
-    // Distribute conversations into bins
+    // Distribute conversations into bins - O(M) complexity
     for (ConversationEntity conv : conversations) {
       LocalDateTime convStart = conv.getStartTime();
-      LocalDateTime convEnd = conv.getEndTime();
 
-      // For simplicity, we'll attribute the entire conversation to its start time bin
-      // A more sophisticated approach would distribute across multiple bins
-      LocalDateTime binStart = findBinForTimestamp(convStart, binStarts, intervalSecs);
+      // Calculate bin index directly instead of looping through all bins - O(1)
+      long secondsFromStart = ChronoUnit.SECONDS.between(startTime, convStart);
 
-      if (binStart != null && bins.containsKey(binStart)) {
-        TimelineBinData bin = bins.get(binStart);
+      // Skip if conversation starts before our time range
+      if (secondsFromStart < 0) {
+        continue;
+      }
+
+      // Calculate which bin this conversation belongs to
+      long binIndex = secondsFromStart / intervalSecs;
+
+      // Skip if bin index is out of range
+      if (binIndex >= binStarts.size()) {
+        binIndex = binStarts.size() - 1; // Attribute to last bin
+      }
+
+      LocalDateTime binStart = binStarts.get((int) binIndex);
+      TimelineBinData bin = bins.get(binStart);
+
+      if (bin != null) {
         bin.packetCount += conv.getPacketCount();
         bin.bytes += conv.getTotalBytes();
 
@@ -168,31 +193,60 @@ public class TimelineService {
         .collect(Collectors.toList());
   }
 
+
   /**
-   * Find the appropriate bin for a given timestamp
+   * Calculate optimal interval to respect maxDataPoints limit
    *
-   * @param timestamp The timestamp to bin
-   * @param binStarts List of bin start times
-   * @param intervalSecs Interval size in seconds
-   * @return The bin start time, or null if not found
+   * @param start Start time
+   * @param end End time
+   * @param requestedInterval Requested interval in seconds
+   * @param maxDataPoints Maximum number of data points (null to use config default)
+   * @return Optimal interval in seconds
    */
-  private LocalDateTime findBinForTimestamp(
-      LocalDateTime timestamp, List<LocalDateTime> binStarts, Integer intervalSecs) {
-    for (int i = 0; i < binStarts.size(); i++) {
-      LocalDateTime binStart = binStarts.get(i);
-      LocalDateTime binEnd = binStart.plusSeconds(intervalSecs);
-
-      if (!timestamp.isBefore(binStart) && timestamp.isBefore(binEnd)) {
-        return binStart;
-      }
+  private Integer calculateOptimalInterval(
+      LocalDateTime start, LocalDateTime end, Integer requestedInterval, Integer maxDataPoints) {
+    // Defensive check for invalid interval
+    if (requestedInterval <= 0) {
+      throw new IllegalArgumentException("Interval must be positive");
     }
 
-    // If timestamp is after all bins, return the last bin
-    if (!binStarts.isEmpty() && !timestamp.isBefore(binStarts.get(binStarts.size() - 1))) {
-      return binStarts.get(binStarts.size() - 1);
+    // Use config default if not provided
+    int limit =
+        maxDataPoints != null ? maxDataPoints : analysisProperties.getMaxTimelineDataPoints();
+
+    // If auto-adjust is disabled, return requested interval
+    if (!analysisProperties.isAutoAdjustInterval()) {
+      return requestedInterval;
     }
 
-    return null;
+    // Calculate duration and expected bin count
+    long durationSeconds = ChronoUnit.SECONDS.between(start, end);
+    // Use ceiling division to avoid underestimating bin count
+    long expectedBins = (durationSeconds + requestedInterval - 1) / requestedInterval;
+
+    // If within limit, no adjustment needed
+    if (expectedBins <= limit) {
+      return requestedInterval;
+    }
+
+    // Calculate minimum interval to stay under limit
+    // Use long to prevent overflow, then cap at Integer.MAX_VALUE
+    long adjustedIntervalLong = (long) Math.ceil((double) durationSeconds / limit);
+    int adjustedInterval = (int) Math.min(adjustedIntervalLong, (long) Integer.MAX_VALUE);
+
+    // Enforce minimum interval constraint
+    adjustedInterval = Math.max(adjustedInterval, analysisProperties.getMinTimelineInterval());
+
+    log.info(
+        "Timeline auto-adjusted: duration={}s, requestedInterval={}s, "
+            + "adjustedInterval={}s, expectedBins={}, limit={}",
+        durationSeconds,
+        requestedInterval,
+        adjustedInterval,
+        expectedBins,
+        limit);
+
+    return adjustedInterval;
   }
 
   /** Internal class to accumulate data for a time bin */

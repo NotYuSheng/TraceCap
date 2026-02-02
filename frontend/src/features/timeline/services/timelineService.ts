@@ -39,16 +39,21 @@ export const timelineService = {
   /**
    * Get timeline data for a PCAP file
    * @param fileId - The file ID to get timeline for
+   * @param maxDataPoints - Optional maximum number of data points to return
    * @returns Timeline data points
    */
-  getTimelineData: async (fileId: string): Promise<TimelineDataPoint[]> => {
+  getTimelineData: async (
+    fileId: string,
+    maxDataPoints?: number
+  ): Promise<TimelineDataPoint[]> => {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 700));
       return mockTimelineData;
     }
 
     const response = await apiClient.get<TimelineApiResponse[]>(
-      API_ENDPOINTS.TIMELINE_DATA(fileId)
+      API_ENDPOINTS.TIMELINE_DATA(fileId),
+      { params: { maxDataPoints } }
     );
 
     // Transform backend response to frontend format
@@ -60,12 +65,14 @@ export const timelineService = {
    * @param fileId - The file ID
    * @param start - Start timestamp
    * @param end - End timestamp
+   * @param maxDataPoints - Optional maximum number of data points to return
    * @returns Timeline data points for the specified range
    */
   getTimelineRange: async (
     fileId: string,
     start: number,
-    end: number
+    end: number,
+    maxDataPoints?: number
   ): Promise<TimelineDataPoint[]> => {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -77,7 +84,14 @@ export const timelineService = {
     const endISO = new Date(end).toISOString();
 
     const response = await apiClient.get<TimelineApiResponse[]>(
-      `/api/timeline/${fileId}/range?start=${startISO}&end=${endISO}`
+      `/api/timeline/${fileId}/range`,
+      {
+        params: {
+          start: startISO,
+          end: endISO,
+          maxDataPoints,
+        },
+      }
     );
 
     // Transform backend response to frontend format
