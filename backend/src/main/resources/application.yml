@@ -148,6 +148,9 @@ tracepcap:
     batch-size: 1000
     timeout-seconds: 300
     max-concurrent-analyses: 3
+    max-timeline-data-points: 1000
+    min-timeline-interval: 1
+    auto-adjust-interval: true
   cleanup:
     cron: "0 0 * * * ?"  # Run every hour at the top of the hour
     enabled: true
